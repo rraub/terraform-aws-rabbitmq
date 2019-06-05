@@ -14,7 +14,7 @@ data "aws_ami_ids" "ami" {
 }
 
 locals {
-  cluster_name = "rabbitmq-${var.name}"
+  cluster_name = "${var.name}"
 }
 
 resource "random_string" "admin_password" {
@@ -91,7 +91,7 @@ resource "aws_iam_instance_profile" "profile" {
 }
 
 resource "aws_security_group" "rabbitmq_elb" {
-  name        = "rabbitmq_elb-${var.name}"
+  name        = "${var.name}-elb"
   vpc_id      = "${var.vpc_id}"
   description = "Security Group for the rabbitmq elb"
 
