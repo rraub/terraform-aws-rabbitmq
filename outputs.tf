@@ -16,4 +16,3 @@ output "secret_cookie" {
   value     = random_string.secret_cookie.result
   sensitive = true
 }
-
