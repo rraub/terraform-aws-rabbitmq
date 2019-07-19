@@ -54,3 +54,10 @@ variable "instance_volume_iops" {
   default = "0"
 }
 
+variable "rabbitmq_image" {
+    type = string
+}
+
+variable "ecr_registry_id" {
+    type = string
+}

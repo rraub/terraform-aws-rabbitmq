@@ -44,17 +44,24 @@ data "aws_iam_policy_document" "policy_doc" {
   }
 }
 
+resource "aws_cloudwatch_log_group" "log_group" {
+  name = var.name
+}
+
 data "template_file" "cloud-init" {
   template = file("${path.module}/cloud-init.yaml")
 
   vars = {
-    sync_node_count = 3
+    sync_node_count = var.max_size
     asg_name        = local.cluster_name
     region          = data.aws_region.current.name
     admin_password  = random_string.admin_password.result
     rabbit_password = random_string.rabbit_password.result
     secret_cookie   = random_string.secret_cookie.result
     message_timeout = 3 * 24 * 60 * 60 * 1000 # 3 days
+    rabbitmq_image  = var.rabbitmq_image
+    ecr_registry_id = var.ecr_registry_id
+    cw_log_group    = aws_cloudwatch_log_group.log_group.name
   }
 }
 
@@ -63,28 +70,53 @@ resource "aws_iam_role" "role" {
   assume_role_policy = data.aws_iam_policy_document.policy_doc.json
 }
 
+data "aws_iam_policy_document" "policy_permissions_doc" {
+  statement {
+    effect  = "Allow"
+    actions = [
+      "autoscaling:DescribeAutoScalingInstances",
+      "ec2:DescribeInstances"
+    ]
+    resources = [
+      "*"
+    ]
+  }
+
+  statement {
+    effect  = "Allow"
+    actions = [
+      "logs:CreateLogStream",
+      "logs:PutLogEvents"            
+    ]
+    resources = [
+      aws_cloudwatch_log_group.log_group.arn,
+      "${aws_cloudwatch_log_group.log_group.arn}/*"
+    ]
+  }
+
+  statement {
+    effect  = "Allow"
+    actions = [
+        "ecr:GetAuthorizationToken",
+        "ecr:ListImages",
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ecr:DescribeImages",
+        "ecr:DescribeRepositories",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:GetRepositoryPolicy"
+    ]
+    resources = [
+        "*"
+    ]
+  }
+}
+
 resource "aws_iam_role_policy" "policy" {
   name = local.cluster_name
   role = aws_iam_role.role.id
 
-  policy = <<EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "autoscaling:DescribeAutoScalingInstances",
-                "ec2:DescribeInstances"
-            ],
-            "Resource": [
-                "*"
-            ]
-        }
-    ]
-}
-EOF
-
+  policy = data.aws_iam_policy_document.policy_permissions_doc.json
 }
 
 resource "aws_iam_instance_profile" "profile" {
@@ -151,13 +183,13 @@ resource "aws_security_group" "rabbitmq_nodes" {
 }
 
 resource "aws_launch_configuration" "rabbitmq" {
-  name = local.cluster_name
-  image_id = data.aws_ami_ids.ami.ids[0]
-  instance_type = var.instance_type
-  key_name = var.ssh_key_name
-  security_groups = flatten([aws_security_group.rabbitmq_nodes.id, var.nodes_additional_security_group_ids])
+  name_prefix          = local.cluster_name
+  image_id             = data.aws_ami_ids.ami.ids[0]
+  instance_type        = var.instance_type
+  key_name             = var.ssh_key_name
+  security_groups      = flatten([aws_security_group.rabbitmq_nodes.id, var.nodes_additional_security_group_ids])
   iam_instance_profile = aws_iam_instance_profile.profile.id
-  user_data = data.template_file.cloud-init.rendered
+  user_data            = data.template_file.cloud-init.rendered
 
   root_block_device {
     volume_type = var.instance_volume_type
