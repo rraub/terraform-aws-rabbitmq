@@ -55,9 +55,9 @@ variable "instance_volume_iops" {
 }
 
 variable "rabbitmq_image" {
-    type = string
+  type = string
 }
 
 variable "ecr_registry_id" {
-    type = string
+  type = string
 }
