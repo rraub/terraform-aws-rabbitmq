@@ -220,6 +220,12 @@ resource "aws_autoscaling_group" "rabbitmq" {
     value = local.cluster_name
     propagate_at_launch = true
   }
+
+  tag {
+    key = "MonitorRMQ"
+    value = "enabled"
+    propagate_at_launch = true
+  }
 }
 
 resource "aws_elb" "elb" {
