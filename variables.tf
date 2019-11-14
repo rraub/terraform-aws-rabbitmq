@@ -64,5 +64,5 @@ variable "ecr_registry_id" {
 
 variable "log_retention_in_days" {
   type    = string
-  default = null
+  default = 365
 }
