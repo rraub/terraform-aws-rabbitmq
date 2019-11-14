@@ -61,3 +61,8 @@ variable "rabbitmq_image" {
 variable "ecr_registry_id" {
   type = string
 }
+
+variable "log_retention_in_days" {
+  type    = string
+  default = null
+}

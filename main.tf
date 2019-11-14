@@ -45,7 +45,8 @@ data "aws_iam_policy_document" "policy_doc" {
 }
 
 resource "aws_cloudwatch_log_group" "log_group" {
-  name = var.name
+  name              = var.name
+  retention_in_days = var.log_retention_in_days
 }
 
 data "template_file" "cloud-init" {
@@ -72,7 +73,7 @@ resource "aws_iam_role" "role" {
 
 data "aws_iam_policy_document" "policy_permissions_doc" {
   statement {
-    effect  = "Allow"
+    effect = "Allow"
     actions = [
       "autoscaling:DescribeAutoScalingInstances",
       "ec2:DescribeInstances"
@@ -83,10 +84,10 @@ data "aws_iam_policy_document" "policy_permissions_doc" {
   }
 
   statement {
-    effect  = "Allow"
+    effect = "Allow"
     actions = [
       "logs:CreateLogStream",
-      "logs:PutLogEvents"            
+      "logs:PutLogEvents"
     ]
     resources = [
       aws_cloudwatch_log_group.log_group.arn,
@@ -95,19 +96,19 @@ data "aws_iam_policy_document" "policy_permissions_doc" {
   }
 
   statement {
-    effect  = "Allow"
+    effect = "Allow"
     actions = [
-        "ecr:GetAuthorizationToken",
-        "ecr:ListImages",
-        "ecr:BatchCheckLayerAvailability",
-        "ecr:BatchGetImage",
-        "ecr:DescribeImages",
-        "ecr:DescribeRepositories",
-        "ecr:GetDownloadUrlForLayer",
-        "ecr:GetRepositoryPolicy"
+      "ecr:GetAuthorizationToken",
+      "ecr:ListImages",
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:BatchGetImage",
+      "ecr:DescribeImages",
+      "ecr:DescribeRepositories",
+      "ecr:GetDownloadUrlForLayer",
+      "ecr:GetRepositoryPolicy"
     ]
     resources = [
-        "*"
+      "*"
     ]
   }
 }
@@ -121,18 +122,18 @@ resource "aws_iam_role_policy" "policy" {
 
 resource "aws_iam_instance_profile" "profile" {
   name_prefix = local.cluster_name
-  role = aws_iam_role.role.name
+  role        = aws_iam_role.role.name
 }
 
 resource "aws_security_group" "rabbitmq_elb" {
-  name = "${var.name}-elb"
-  vpc_id = var.vpc_id
+  name        = "${var.name}-elb"
+  vpc_id      = var.vpc_id
   description = "Security Group for the rabbitmq elb"
 
   egress {
-    protocol = "-1"
-    from_port = 0
-    to_port = 0
+    protocol    = "-1"
+    from_port   = 0
+    to_port     = 0
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -142,35 +143,35 @@ resource "aws_security_group" "rabbitmq_elb" {
 }
 
 resource "aws_security_group" "rabbitmq_nodes" {
-  name = "${local.cluster_name}-nodes"
-  vpc_id = var.vpc_id
+  name        = "${local.cluster_name}-nodes"
+  vpc_id      = var.vpc_id
   description = "Security Group for the rabbitmq nodes"
 
   ingress {
-    protocol = -1
+    protocol  = -1
     from_port = 0
-    to_port = 0
-    self = true
+    to_port   = 0
+    self      = true
   }
 
   ingress {
-    protocol = "tcp"
-    from_port = 5672
-    to_port = 5672
+    protocol        = "tcp"
+    from_port       = 5672
+    to_port         = 5672
     security_groups = [aws_security_group.rabbitmq_elb.id]
   }
 
   ingress {
-    protocol = "tcp"
-    from_port = 15672
-    to_port = 15672
+    protocol        = "tcp"
+    from_port       = 15672
+    to_port         = 15672
     security_groups = [aws_security_group.rabbitmq_elb.id]
   }
 
   egress {
-    protocol = "-1"
+    protocol  = "-1"
     from_port = 0
-    to_port = 0
+    to_port   = 0
 
     cidr_blocks = [
       "0.0.0.0/0",
@@ -192,9 +193,9 @@ resource "aws_launch_configuration" "rabbitmq" {
   user_data            = data.template_file.cloud-init.rendered
 
   root_block_device {
-    volume_type = var.instance_volume_type
-    volume_size = var.instance_volume_size
-    iops = var.instance_volume_iops
+    volume_type           = var.instance_volume_type
+    volume_size           = var.instance_volume_size
+    iops                  = var.instance_volume_iops
     delete_on_termination = true
   }
 
@@ -204,26 +205,26 @@ resource "aws_launch_configuration" "rabbitmq" {
 }
 
 resource "aws_autoscaling_group" "rabbitmq" {
-  name = local.cluster_name
-  min_size = var.min_size
-  desired_capacity = var.desired_size
-  max_size = var.max_size
+  name                      = local.cluster_name
+  min_size                  = var.min_size
+  desired_capacity          = var.desired_size
+  max_size                  = var.max_size
   health_check_grace_period = 300
-  health_check_type = "ELB"
-  force_delete = true
-  launch_configuration = aws_launch_configuration.rabbitmq.name
-  load_balancers = [aws_elb.elb.name]
-  vpc_zone_identifier = var.subnet_ids
+  health_check_type         = "ELB"
+  force_delete              = true
+  launch_configuration      = aws_launch_configuration.rabbitmq.name
+  load_balancers            = [aws_elb.elb.name]
+  vpc_zone_identifier       = var.subnet_ids
 
   tag {
-    key = "Name"
-    value = local.cluster_name
+    key                 = "Name"
+    value               = local.cluster_name
     propagate_at_launch = true
   }
 
   tag {
-    key = "MonitorRMQ"
-    value = "enabled"
+    key                 = "MonitorRMQ"
+    value               = "enabled"
     propagate_at_launch = true
   }
 }
@@ -232,30 +233,30 @@ resource "aws_elb" "elb" {
   name = "${local.cluster_name}-elb"
 
   listener {
-    instance_port = 5672
+    instance_port     = 5672
     instance_protocol = "tcp"
-    lb_port = 5672
-    lb_protocol = "tcp"
+    lb_port           = 5672
+    lb_protocol       = "tcp"
   }
 
   listener {
-    instance_port = 15672
+    instance_port     = 15672
     instance_protocol = "http"
-    lb_port = 80
-    lb_protocol = "http"
+    lb_port           = 80
+    lb_protocol       = "http"
   }
 
   health_check {
-    interval = 30
+    interval            = 30
     unhealthy_threshold = 10
-    healthy_threshold = 2
-    timeout = 3
-    target = "TCP:5672"
+    healthy_threshold   = 2
+    timeout             = 3
+    target              = "TCP:5672"
   }
 
-  subnets = var.subnet_ids
-  idle_timeout = 3600
-  internal = true
+  subnets         = var.subnet_ids
+  idle_timeout    = 3600
+  internal        = true
   security_groups = flatten([aws_security_group.rabbitmq_elb.id, var.elb_additional_security_group_ids])
 
   tags = {
