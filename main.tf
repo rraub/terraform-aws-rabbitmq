@@ -18,17 +18,17 @@ locals {
   cluster_name = var.name
 }
 
-resource "random_string" "admin_password" {
+resource "random_password" "admin_password" {
   length  = 32
   special = false
 }
 
-resource "random_string" "rabbit_password" {
+resource "random_password" "rabbit_password" {
   length  = 32
   special = false
 }
 
-resource "random_string" "secret_cookie" {
+resource "random_password" "secret_cookie" {
   length  = 64
   special = false
 }
@@ -56,9 +56,9 @@ data "template_file" "cloud-init" {
     sync_node_count = var.max_size
     asg_name        = local.cluster_name
     region          = data.aws_region.current.name
-    admin_password  = random_string.admin_password.result
-    rabbit_password = random_string.rabbit_password.result
-    secret_cookie   = random_string.secret_cookie.result
+    admin_password  = random_password.admin_password.result
+    rabbit_password = random_password.rabbit_password.result
+    secret_cookie   = random_password.secret_cookie.result
     message_timeout = 3 * 24 * 60 * 60 * 1000 # 3 days
     rabbitmq_image  = var.rabbitmq_image
     ecr_registry_id = var.ecr_registry_id
